@@ -7,7 +7,7 @@ from fastapi.security.api_key import APIKey
 from src.sizam.presentation.api.security import get_api_key
 from src.sizam.application.parsers import get_data, InvalidHeader
 from src.sizam.application.external_api.wiki2035 import Worker, get_external_api_worker
-from src.sizam.services.consts import UntiCourseStatus
+from src.sizam.application.consts import UntiCourseStatus
 
 router = APIRouter(prefix="/courses")
 logger = logging.getLogger(__name__)
