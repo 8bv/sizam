@@ -3,8 +3,8 @@ from typing import Optional
 
 from openpyxl import load_workbook
 
-from ..application.schemas import UntiSetStatusDTO
-from ..services.consts import STATUSES_MAPPING, UntiCourseStatus
+from .schemas import UntiSetStatusDTO
+from .consts import STATUSES_MAPPING, UntiCourseStatus
 
 
 logger = logging.getLogger(__name__)

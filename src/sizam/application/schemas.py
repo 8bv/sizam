@@ -1,6 +1,6 @@
 import dataclasses
 
-from ..services.consts import UntiCourseStatus
+from .consts import UntiCourseStatus
 
 
 @dataclasses.dataclass

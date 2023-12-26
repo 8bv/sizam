@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+
+[project]
+name = "moodyni"
+version = "0.0.1"
+authors = [
+  { name="Golvokevich Boris", email="golovkevich@outlook.com" },
+]
+description = "Wraper for intercat with wiki2035"
+requires-python = ">=3.11"
+dependencies = [
+  "openpyxl~=3.1",
+  "httpx~=0.25",
+  "fastapi~=0.104",
+  "python-multipart",
+  "uvicorn",
+  "SQLAlchemy~=2.0"
+]
