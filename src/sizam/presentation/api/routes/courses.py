@@ -1,4 +1,5 @@
 import logging
+from functools import partial
 from typing import List
 
 from fastapi import APIRouter, Depends, BackgroundTasks, UploadFile, HTTPException
@@ -79,11 +80,20 @@ def set_expelled_from_excel(
         excel_file: UploadFile,
         reason_file: UploadFile,
         reason_file_ds: UploadFile,
+        background_tasks: BackgroundTasks,
         worker: Worker = Depends(get_external_api_worker),
 ):
     _validate_excel(excel_file)
-    for row in get_data(excel_file, status=UntiCourseStatus.FINISHED):
-        worker.update_status(row, reason_file_path=reason_file, reason_file_ds_path=reason_file_ds)
+    try:
+        data = get_data(excel_file.file, status=UntiCourseStatus.EXPELLED)
+        fn = partial(worker.update_status, reason_file_path=reason_file, reason_file_ds_path=reason_file_ds)
+        for row in data:
+            background_tasks.add_task(fn, row)
+        return {"message": f"Будет послано запросов: {len(data)} на завершение модуля."}
+    except InvalidHeader as ex:
+        raise HTTPException(
+            status_code=422, detail=ex.args[0]
+        )
 
 
 @router.get("/{course_id}/")
