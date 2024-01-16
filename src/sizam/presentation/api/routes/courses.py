@@ -1,5 +1,5 @@
 import logging
-from functools import partial
+from enum import Enum
 from typing import List
 
 from fastapi import APIRouter, Depends, BackgroundTasks, UploadFile, HTTPException
@@ -75,21 +75,35 @@ def set_accepted_from_excel(
         )
 
 
+class ExpelledReasonChoice(str, Enum):
+    reason_expelled_legitimate_user_application = "По желанию заявителя"
+    reason_expelled_not_legitimate_absence = "Непосещаемость"
+
+
 @router.post("/set_expelled")
 def set_expelled_from_excel(
         excel_file: UploadFile,
+        reason_choice: ExpelledReasonChoice,
         reason_file: UploadFile,
         reason_file_ds: UploadFile,
         background_tasks: BackgroundTasks,
         worker: Worker = Depends(get_external_api_worker),
 ):
+    """Метод для отчисления студентов."""
     _validate_excel(excel_file)
+
     try:
         data = get_data(excel_file.file, status=UntiCourseStatus.EXPELLED)
-        fn = partial(worker.update_status, reason_file_path=reason_file, reason_file_ds_path=reason_file_ds)
+
         for row in data:
-            background_tasks.add_task(fn, row)
-        return {"message": f"Будет послано запросов: {len(data)} на завершение модуля."}
+            background_tasks.add_task(
+                worker.update_status,
+                row,
+                reason_choice=reason_choice.name,
+                reason_file_info=(reason_file.filename, reason_file.file),
+                reason_file_ds_info=(reason_file_ds.filename, reason_file_ds.file)
+            )
+        return {"message": f"Будет послано запросов: {len(data)} на отчисление."}
     except InvalidHeader as ex:
         raise HTTPException(
             status_code=422, detail=ex.args[0]

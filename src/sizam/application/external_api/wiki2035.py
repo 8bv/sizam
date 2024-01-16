@@ -3,7 +3,7 @@ import logging
 import time
 from typing import List, Tuple
 
-from httpx import Client, ConnectTimeout, ReadTimeout, RemoteProtocolError
+from httpx import Client, ConnectTimeout, ReadTimeout, RemoteProtocolError, WriteTimeout
 
 from ..schemas import UntiSetStatusDTO, UntiCourseStatus
 
@@ -45,11 +45,10 @@ class Worker:
         files = {}
 
         if unti.status is UntiCourseStatus.EXPELLED:
-            self._session.headers["Content-Type"] = "multipart/form-data"
-            files = {
-                "reason_file": status_extra.pop("reason_file_path"),
-                "reason_file_ds": status_extra.pop("reason_file_ds_path")
-            }
+            files = [
+                ("reason_file", status_extra.pop("reason_file_info")),
+                ("reason_file_ds", status_extra.pop("reason_file_ds_info"))
+            ]
 
         data = {
             "platform_id": self._platform_id,
@@ -62,14 +61,22 @@ class Worker:
         have_to_retry = True
         while have_to_retry:
             try:
+                logger.debug("files %s", files)
                 response = self._session.post(
                     "/api/v6/course/enroll/update/",
                     data=data,
                     files=files,
                 )
-            except (ReadTimeout, ConnectTimeout, RemoteProtocolError) as ex:
+            except (ReadTimeout, ConnectTimeout, RemoteProtocolError, WriteTimeout) as ex:
                 logger.exception("timeout for response with data: %s", data, exc_info=ex)
             else:
+                if 499 < response.status_code < 503:
+                    logger.debug(
+                        "time elapsed: %s, data sent: %s, response status code: %d",
+                        response.elapsed, data, response.status_code
+                    )
+                    continue
+
                 logger.debug(
                     "time elapsed: %s, data sent: %s, response body: %s",
                     response.elapsed, data, response.json()
