@@ -2,7 +2,7 @@
 requires = ["setuptools >= 61.0"]
 
 [project]
-name = "moodyni"
+name = "sizam"
 version = "0.0.1"
 authors = [
   { name="Golvokevich Boris", email="golovkevich@outlook.com" },
@@ -12,7 +12,7 @@ requires-python = ">=3.11"
 dependencies = [
   "openpyxl~=3.1",
   "httpx~=0.25",
-  "fastapi~=0.104",
+  "fastapi==0.104.1",
   "python-multipart",
   "uvicorn",
   "SQLAlchemy~=2.0"
