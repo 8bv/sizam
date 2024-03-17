@@ -1,17 +1,15 @@
-# import os
+import os
 from functools import partial
-from typing import Callable, Iterable, NewType, Union
+from typing import Callable, Iterable, NewType
 
 from fastapi import Depends, FastAPI
 from httpx import Client
-from sqlalchemy import create_engine, URL
+from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from ..config import Config, Wiki2035Config
-from ..db.gateway import DBGateway
 from ..sevices import RequestMakerService
 
-PlatformID = NewType("PlatformID", str)
+PlatformId = NewType("PlatformId", str)
 
 
 class Stub:
@@ -59,25 +57,24 @@ class Stub:
 
 
 def new_requests_worker(
-        external_service_web_config: Wiki2035Config,
         session: Session = Depends(Stub(Session))
 ):
-    with Client(
-            base_url=external_service_web_config.base_url
-    ) as http_client:
-        http_client.headers["Authorization"] = external_service_web_config.token
+    with Client(base_url=os.environ["BASE_URL"]) as http_client:
+        http_client.headers["Authorization"] = os.environ["API_KEY"]
         yield RequestMakerService(session, http_client)
 
 
-def create_session_maker(db_uri: Union[str, URL]):
+def create_session_maker():
+    db_uri = os.environ["DB_URI"]
+
     engine = create_engine(
         db_uri,
         echo=True,
         # pool_size=15,
         # max_overflow=15,
-        connect_args={
-            "connect_timeout": 5,
-        },
+        # connect_args={
+        #     "connect_timeout": 5,
+        # },
     )
     return sessionmaker(engine)
 
@@ -87,17 +84,13 @@ def new_session(session_maker: sessionmaker) -> Iterable[Session]:
         yield session
 
 
-def new_gateway(session: Session = Depends(Stub(Session))):
-    yield DBGateway(session)
-
-def get_platform_id(external_service_web_config: Wiki2035Config):
-    return external_service_web_config.platform_id
+def get_platform_id() -> PlatformId:
+    return PlatformId(os.environ["COMPANY_NAME"])
 
 
-def init_dependencies(app: FastAPI, config: Config):
-    session_maker = create_session_maker(config.db.sqla_url)
+def init_dependencies(app: FastAPI):
+    session_maker = create_session_maker()
 
     app.dependency_overrides[Session] = partial(new_session, session_maker)
-    app.dependency_overrides[DBGateway] = new_gateway
-    app.dependency_overrides[RequestMakerService] = partial(new_requests_worker, config.wiki2035)
-    app.dependency_overrides[PlatformID] = partial(get_platform_id, config.wiki2035)
+    app.dependency_overrides[RequestMakerService] = new_requests_worker
+    app.dependency_overrides[PlatformId] = get_platform_id

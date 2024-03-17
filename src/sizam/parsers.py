@@ -16,7 +16,7 @@ class InvalidHeader(Exception):
     'Неверный формат первой строки в файле'
 
 
-def get_data(
+def get_units_with_course_from_excel(
         path: str,
         sheet: Optional[str] = None,
 ) -> list[UnitWithCourse]:
@@ -26,9 +26,9 @@ def get_data(
     else:
         worksheet = workbook[sheet]
 
-    it = worksheet.iter_rows(values_only=True)
+    wsit = worksheet.iter_rows(values_only=True)
 
-    header = next(it)
+    header = next(wsit)
     if not any(header):
         raise InvalidHeader("Первая строка не найдена")
 
@@ -37,9 +37,7 @@ def get_data(
     if [v.lower() for v in header] != header_template:
         raise InvalidHeader("Формат первой строки не соответствует шаблону: %s" % ", ".join(header_template))
 
-    result = []
-    for row in it:
-        result.append(
-            UnitWithCourse(unit_id=int(row[0]), course_id=int(row[1]))
-        )
-    return result
+    return [
+        UnitWithCourse(unit_id=int(row[0]), course_id=int(row[1]))
+        for row in wsit
+    ]

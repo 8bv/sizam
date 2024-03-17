@@ -1,10 +1,20 @@
+from decimal import Decimal
 from datetime import datetime
+from typing import Annotated
 
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import Numeric
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, registry
+
+
+num_12_6 = Annotated[Decimal, 12]
 
 
 class Base(DeclarativeBase):
-    pass
+    registry = registry(
+        type_annotation_map={
+            num_12_6: Numeric(12, 6),
+        }
+    )
 
 
 class WithTimestamp:

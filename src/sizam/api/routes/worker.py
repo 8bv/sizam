@@ -6,18 +6,18 @@ from ...sevices import RequestMakerService
 router = APIRouter(prefix="/requests_worker")
 
 
-@router.post("/process_requests", status_code=201)
-def process_requests(
+@router.post("/run", status_code=201)
+def run_service(
         background_tasks: BackgroundTasks,
         service: RequestMakerService = Depends(new_requests_worker)
 ):
     if service.is_running:
         return {"message": "Запросы уже обрабатываются."}
 
-    background_tasks.add_task(service.proceed_uncompleted_requests)
+    background_tasks.add_task(service.run)
 
 
-@router.post("/stop_service")
+@router.post("/stop")
 def stop_service(
         service: RequestMakerService = Depends(new_requests_worker)
 ):
@@ -27,8 +27,8 @@ def stop_service(
     return {"message": "Сервис остановлен."}
 
 
-@router.get("/stop_service")
-def stop_service(
+@router.get("/state")
+def service_state(
         service: RequestMakerService = Depends(new_requests_worker)
 ):
     return {"message": "Запущен" if service.is_running else "Остановлен"}

@@ -6,12 +6,13 @@ from sqlalchemy.orm import (
     Mapped, mapped_column, relationship
 )
 
-from .base import Base, WithTimestamp
+from .base import Base, num_12_6, WithTimestamp
 
 
 class RequestStatus(Enum):
     PENDING = "pending"
     RETRYING = "retrying"
+    CLIENT_ERROR = "client_error"
     COMPLETED = "completed"
 
 
@@ -24,6 +25,16 @@ class Endpoint(Base):
     requests: Mapped[List["Request"]] = relationship(back_populates="endpoint")
 
 
+class RequestFile(Base, WithTimestamp):
+    __tablename__ = "request_file"
+
+    file_id: Mapped[int] = mapped_column(ForeignKey("file.id"), primary_key=True)
+    request_id: Mapped[int] = mapped_column(ForeignKey("request.id"), primary_key=True)
+
+    file: Mapped["File"] = relationship(back_populates="request_associations")
+    request: Mapped["Request"] = relationship(back_populates="file_associations")
+
+
 class Request(Base, WithTimestamp):
     __tablename__ = "request"
 
@@ -33,16 +44,13 @@ class Request(Base, WithTimestamp):
     data: Mapped[str]
     status: Mapped[RequestStatus]
 
-    files: Mapped[List["RequestFile"]] = relationship(back_populates="file")
-
-
-class RequestFile(Base, WithTimestamp):
-    __tablename__ = "request_file"
-
-    file_id: Mapped[int] = mapped_column(ForeignKey("file.id"), primary_key=True)
-    request_id: Mapped[int] = mapped_column(ForeignKey("request.id"), primary_key=True)
-    file: Mapped["File"] = relationship(back_populates="requests")
-    requests: Mapped["Request"] = relationship(back_populates="file")
+    files: Mapped[List["File"]] = relationship(
+        back_populates="requests", secondary=RequestFile.__table__
+    )
+    file_associations: Mapped[List[RequestFile]] = relationship(
+        back_populates="request", viewonly=True
+    )
+    responses: Mapped[List["Response"]] = relationship(back_populates="request")
 
 
 class File(Base, WithTimestamp):
@@ -52,7 +60,12 @@ class File(Base, WithTimestamp):
     name: Mapped[Optional[str]]
     purpose: Mapped[Optional[str]]
     content: Mapped[bytes]
-    requests: Mapped[List["RequestFile"]] = relationship(back_populates="file")
+    requests: Mapped[List["Request"]] = relationship(
+        back_populates="files", secondary=RequestFile.__table__
+    )
+    request_associations: Mapped[List[RequestFile]] = relationship(
+        back_populates="file", viewonly=True
+    )
 
 
 class Response(Base, WithTimestamp):
@@ -62,5 +75,6 @@ class Response(Base, WithTimestamp):
     content: Mapped[str]
     status_code: Mapped[int]
     request_id: Mapped[int] = mapped_column(ForeignKey("request.id"))
+    duration: Mapped[num_12_6]
 
     request: Mapped[Request] = relationship(back_populates="responses")
