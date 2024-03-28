@@ -2,6 +2,7 @@ from sqlalchemy import func, select, ScalarResult
 from sqlalchemy.orm import Session, selectinload
 
 from .models.request import Endpoint, Request, RequestFile, RequestStatus
+from .models.wiki2035 import UnitWithCourse
 
 
 def get_or_create_endpoint(uri: str, session: Session) -> Endpoint:
@@ -29,4 +30,14 @@ def get_count_of_uncompleted_requests(session: Session) -> int:
     return session.scalar(
         select(func.count(Request.id))
         .where(Request.status != RequestStatus.COMPLETED)
+    )
+
+
+def get_unit_with_course_from_file(
+        file_id: int,
+        session: Session,
+) -> ScalarResult[UnitWithCourse]:
+    return session.scalars(
+        select(UnitWithCourse)
+        .where(UnitWithCourse.file_id == file_id)
     )

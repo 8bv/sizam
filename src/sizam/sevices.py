@@ -1,8 +1,9 @@
 import json
 import logging
-from typing import Dict
+from json import JSONDecodeError
+from typing import Dict, Tuple
 
-from httpx import Client
+from httpx import Client, Response as HTTPResponse
 from httpx._types import FileTypes # noqa
 from sqlalchemy.orm import Session
 
@@ -13,11 +14,29 @@ from .db.repo import get_uncompleted_requests
 logger = logging.getLogger(__name__)
 
 
+def _get_status_for_resp(resp: HTTPResponse):
+    error_types = {
+        4: RequestStatus.CLIENT_ERROR,
+        5: RequestStatus.SERVER_ERROR,
+    }
+
+    try:
+        content = resp.json()
+    except JSONDecodeError:
+        return error_types[resp.status_code // 100]
+
+    if content.get("success") is not None:
+        return RequestStatus.COMPLETED
+
+    if content.get("status", "").startswith("Application already in status"):
+        return RequestStatus.COMPLETED
+
+    return RequestStatus.RETRYING
+
+
 class RequestMakerService:
     def __init__(self, db_session: Session, http_client: Client):
         self._db_session = db_session
-        # TODO: вынести в отдельный менеджер который будет очищать кэш
-        self._files_cache = {}
         self._http_client = http_client
         self._running = False
 
@@ -32,7 +51,7 @@ class RequestMakerService:
     def is_running(self):
         return self._running
 
-    def _make_request(self, req: Request) -> Response:
+    def _make_request(self, req: Request) -> Tuple[RequestStatus, Response]:
         if req.file_associations:
             files = self._get_files_for_request(req)
         else:
@@ -48,22 +67,21 @@ class RequestMakerService:
             req.data, req.endpoint.value, response.status_code
         )
 
+        status = _get_status_for_resp(response)
         response_model = Response(
             content=response.text,
             status_code=response.status_code,
             request_id=req.id,
             duration=response.elapsed.total_seconds(),
         )
-        return response_model
+
+        return status, response_model
 
     def _get_files_for_request(self, req: Request) -> Dict[str, FileTypes]:
         files = {}
         for file_association in req.file_associations:
             file_id = file_association.file_id
-            file = self._files_cache.get(file_id)
-            if file is None:
-                file = self._db_session.get(File, file_id)
-                self._files_cache[file_id] = file
+            file = self._db_session.get(File, file_id)
             files[file.purpose] = file.name, file.content
         return files
 
@@ -75,14 +93,8 @@ class RequestMakerService:
 
             for request in uncompleted_requests:
                 logger.debug("Proceeding request %s", request)
-                response = self._make_request(request)
-                # TODO: добавить случаи в которых необходимы повторы
-                if response.status_code in range(500, 504):
-                    request.status = RequestStatus.RETRYING
-                elif response.status_code in range(400, 404):
-                    request.status = RequestStatus.CLIENT_ERROR
-                else:
-                    request.status = RequestStatus.COMPLETED
+                request_status, response = self._make_request(request)
+                request.status = request_status
 
                 self._db_session.add(response)
                 self._db_session.commit()

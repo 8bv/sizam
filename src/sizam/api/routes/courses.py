@@ -120,6 +120,40 @@ def set_approved_from_excel(
 @router.post("/set_accepted", status_code=201)
 def set_accepted_from_excel(
         excel_file: UploadFile,
+        session: Session = Depends(Stub(Session)),
+        platform_id: PlatformId = Depends(Stub(PlatformId))
+):
+    """Метод для зачисления"""
+    try:
+        data = get_units_with_course_from_excel(excel_file.file)
+    except InvalidHeader as ex:
+        raise HTTPException(
+            status_code=422, detail=ex.args[0]
+        )
+
+    endpoint = get_or_create_endpoint("/api/v6/course/enroll/update/", session)
+
+    session.add_all([
+        Request(
+            data=json.dumps({
+                "unti_id": row.unit_id,
+                "course_id": row.course_id,
+                "platform_id": platform_id,
+                "status": UnitCourseStatus.ACCEPTED.value,
+            }),
+            status=RequestStatus.PENDING,
+            endpoint=endpoint,
+        )
+        for row in data
+    ])
+    session.commit()
+
+    return {"message": f"Будет послано запросов: {len(data)} на зачисление."}
+
+
+@router.post("/set_accepted_first_time", status_code=201)
+def set_accepted_first_time_from_excel(
+        excel_file: UploadFile,
         accept_date: date,
         admission_order_date: date,
         admission_order_number: str,
@@ -127,7 +161,7 @@ def set_accepted_from_excel(
         session: Session = Depends(Stub(Session)),
         platform_id: PlatformId = Depends(Stub(PlatformId))
 ):
-    """Метод для зачисления"""
+    """Метод для зачисления впервые"""
     try:
         data = get_units_with_course_from_excel(excel_file.file)
     except InvalidHeader as ex:
@@ -208,3 +242,37 @@ def set_expelled_from_excel(
     session.commit()
 
     return {"message": f"Будет послано запросов: {len(data)} на отчисление."}
+
+
+class HeaderTemplate(str, Enum):
+    unit_with_course = "unti_id, course_id"
+    unknown = ""
+
+
+@router.post("/parse_excel")
+def parse_excel(
+        excel_file: UploadFile,
+        header_template: HeaderTemplate,
+        session: Session = Depends(Stub(Session)),
+) -> int:
+    if header_template is HeaderTemplate.unit_with_course:
+        fn = get_units_with_course_from_excel
+    else:
+        raise ValueError
+
+    try:
+        content = excel_file.file
+        data = fn(content)
+    except InvalidHeader as ex:
+        raise HTTPException(
+            status_code=422, detail=ex.args[0]
+        )
+    file = File(content=content, name=excel_file.filename)
+    session.add(file)
+
+    for row in data:
+        row.file = file
+
+    session.add_all(data)
+    session.commit()
+    return file.id

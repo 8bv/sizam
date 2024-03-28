@@ -2,11 +2,20 @@ from decimal import Decimal
 from datetime import datetime
 from typing import Annotated
 
-from sqlalchemy import Numeric
+from sqlalchemy import func, Numeric
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, registry
 
 
 num_12_6 = Annotated[Decimal, 12]
+intpk = Annotated[int, mapped_column(primary_key=True)]
+timestamp = Annotated[
+    datetime,
+    mapped_column(nullable=False, server_default=func.now()),
+]
+timestamp_upd = Annotated[
+    datetime,
+    mapped_column(nullable=False, server_default=func.now(), server_onupdate=func.now()),
+]
 
 
 class Base(DeclarativeBase):
@@ -18,5 +27,5 @@ class Base(DeclarativeBase):
 
 
 class WithTimestamp:
-    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
-    updated_at: Mapped[datetime] = mapped_column(default=datetime.now, onupdate=datetime.now)
+    created_at: Mapped[timestamp]
+    updated_at: Mapped[timestamp_upd]
