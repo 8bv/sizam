@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<table class="table table-light">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">Дата создания</th>
+      <th scope="col">Статус</th>
+      <th scope="col">Данные</th>
+    </tr>
+  </thead>
+  <tbody hx-get="/trigger_delay"
+    hx-trigger="delay:500ms">
+  {% for req in history %}
+    <tr>
+      <th scope="row">{{ req.id }}</th>
+      <td>{{ req.created_at }}</td>
+      <td>{{ req.status.value }}</td>
+      <td>{{ req.data }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

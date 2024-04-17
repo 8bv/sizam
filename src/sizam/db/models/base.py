@@ -14,7 +14,9 @@ timestamp = Annotated[
 ]
 timestamp_upd = Annotated[
     datetime,
-    mapped_column(nullable=False, server_default=func.now(), server_onupdate=func.now()),
+    mapped_column(
+        nullable=False, server_default=func.now(), server_onupdate=func.now()
+    ),
 ]
 
 

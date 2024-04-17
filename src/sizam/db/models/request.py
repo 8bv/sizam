@@ -2,11 +2,9 @@ from enum import Enum
 from typing import List, Optional
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import (
-    Mapped, mapped_column, relationship
-)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import Base, intpk, num_12_6, WithTimestamp
+from .base import Base, intpk, num_12_6, WithTimestamp, timestamp
 
 
 class RequestStatus(Enum):
@@ -15,6 +13,7 @@ class RequestStatus(Enum):
     SERVER_ERROR = "server_error"
     CLIENT_ERROR = "client_error"
     COMPLETED = "completed"
+    MAX_ATTEMPTS_EXCEED = "max_attempts_exceed"
 
 
 class Endpoint(Base):
@@ -26,11 +25,12 @@ class Endpoint(Base):
     requests: Mapped[List["Request"]] = relationship(back_populates="endpoint")
 
 
-class RequestFile(Base, WithTimestamp):
+class RequestFile(Base):
     __tablename__ = "request_file"
 
     file_id: Mapped[int] = mapped_column(ForeignKey("file.id"), primary_key=True)
     request_id: Mapped[int] = mapped_column(ForeignKey("request.id"), primary_key=True)
+    created_at: Mapped[timestamp]
 
     file: Mapped["File"] = relationship(back_populates="request_associations")
     request: Mapped["Request"] = relationship(back_populates="file_associations")
@@ -46,6 +46,7 @@ class Request(Base, WithTimestamp):
     )
     data: Mapped[str]
     status: Mapped[RequestStatus]
+    attempts: Mapped[int] = mapped_column(default=0)
 
     files: Mapped[List["File"]] = relationship(
         back_populates="requests", secondary=RequestFile.__table__
@@ -56,14 +57,14 @@ class Request(Base, WithTimestamp):
     responses: Mapped[List["Response"]] = relationship(back_populates="request")
 
 
-class File(Base, WithTimestamp):
+class File(Base):
     __tablename__ = "file"
 
     id: Mapped[intpk]
     name: Mapped[Optional[str]]
     purpose: Mapped[Optional[str]]
     content: Mapped[bytes]
-    hash: Mapped[str]
+    created_at = Mapped[timestamp]
     requests: Mapped[List["Request"]] = relationship(
         back_populates="files", secondary=RequestFile.__table__
     )
@@ -71,8 +72,12 @@ class File(Base, WithTimestamp):
         back_populates="file", viewonly=True
     )
 
+    __mapper_args__ = {
+        "polymorphic_on": "purpose",
+    }
 
-class Response(Base, WithTimestamp):
+
+class Response(Base):
     __tablename__ = "response"
 
     id: Mapped[intpk]
@@ -80,5 +85,6 @@ class Response(Base, WithTimestamp):
     status_code: Mapped[int]
     request_id: Mapped[int] = mapped_column(ForeignKey("request.id"))
     duration: Mapped[num_12_6]
+    created_at: Mapped[timestamp]
 
     request: Mapped[Request] = relationship(back_populates="responses")

@@ -31,14 +31,28 @@ class DBConfig:
             username=self.username,
             password=self.password,
             database=self.dbname,
-            query=self.extra
+            query=self.extra,
         )
+
+
+@dataclasses.dataclass
+class UvicornConfig:
+    host: str
+    port: int
+
+
+@dataclasses.dataclass
+class RequestsWorkerConfig:
+    timeout: int
+    max_attempts: int
 
 
 @dataclasses.dataclass
 class Config:
     wiki2035: Wiki2035Config
     db: DBConfig
+    uvicorn: UvicornConfig
+    worker: RequestsWorkerConfig
 
 
 def load_config(path: str) -> Config:
@@ -49,11 +63,16 @@ def load_config(path: str) -> Config:
         wiki2035=Wiki2035Config(
             base_url=api_config["base_url"],
             token=f"Token {api_config['token']}",
-            platform_id=api_config["company_name"]
+            platform_id=api_config["company_name"],
         ),
-        db=DBConfig(**{
-            key: value if value else None
-            for key, value
-            in parser["db"].items()
-        })
+        db=DBConfig(
+            **{key: value if value else None for key, value in parser["db"].items()}
+        ),
+        uvicorn=UvicornConfig(
+            host=parser["uvicorn"]["host"], port=int(parser["uvicorn"]["port"])
+        ),
+        worker=RequestsWorkerConfig(
+            timeout=int(parser["requests_worker"]["timeout"]),
+            max_attempts=int(parser["requests_worker"]["max_attempts"]),
+        ),
     )
