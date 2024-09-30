@@ -21,7 +21,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, sessionmaker
 
-from sizam.db.models.request import RequestStatus, Request as RequestModel
+from sizam.db.models.request import RequestStatus, Request as RequestModel, File as FileModel
 from sizam.db.models.wiki2035 import (
     Course,
     ExcelFile,
@@ -426,12 +426,12 @@ def set_expelled_from_excel(
     endpoint = get_or_create_endpoint("/api/v6/course/enroll/update/", session)
     target_units = get_units_with_course_by_file_id(file_id, session)
 
-    reason_file = File(
+    reason_file = FileModel(
         name=reason_file.filename,
         content=reason_file.file.read(),
         purpose="reason_file",
     )
-    reason_file_ds = File(
+    reason_file_ds = FileModel(
         name=reason_file_ds.filename,
         content=reason_file_ds.file.read(),
         purpose="reason_file_ds",

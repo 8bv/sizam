@@ -7,7 +7,7 @@
         {% if field.type == "choice" %}
         <select name="{{ field.name }}" class="form-select form-select-lg mb-3">
             {% for choice in field.choices %}
-            <option value="{{ choice }}">{{ choice.value }}</option>
+            <option value="{{ choice.value }}">{{ choice.value }}</option>
             {% endfor %}
         </select>
         {% else %}

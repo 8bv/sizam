@@ -4,7 +4,7 @@ import time
 from json import JSONDecodeError
 from typing import Dict, Tuple
 
-from httpx import Client, Response as HTTPResponse, ReadTimeout, RemoteProtocolError
+from httpx import Client, Response as HTTPResponse, ReadTimeout, RemoteProtocolError, WriteTimeout
 from httpx._types import FileTypes  # noqa
 from sqlalchemy.orm import Session
 
@@ -41,7 +41,8 @@ class RequestMakerService:
                 logger.debug("Proceeding request %s", request)
                 try:
                     request_status, response = self._make_request(request)
-                except (ReadTimeout, RemoteProtocolError):
+                except (ReadTimeout, RemoteProtocolError, WriteTimeout) as ex:
+                    logger.exception("Exception caused while performing request", exc_info=ex)
                     continue
                 request.attempts += 1
                 request.status = request_status

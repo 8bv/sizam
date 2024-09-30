@@ -19,7 +19,7 @@ def main(config_path):
 
     logger.warning("Prog started")
     with (
-        httpx.Client(base_url=config.wiki2035.base_url) as client
+        httpx.Client(base_url=config.wiki2035.base_url, timeout=httpx.Timeout(10, write=20)) as client
     ):
         client.headers["Authorization"] = config.wiki2035.token
         requests_maker = RequestMakerService(session_maker(), client)

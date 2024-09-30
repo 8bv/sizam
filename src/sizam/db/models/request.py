@@ -1,8 +1,8 @@
 from enum import Enum
 from typing import List, Optional
 
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import ForeignKey, case
+from sqlalchemy.orm import Mapped, mapped_column, relationship, column_property
 
 from .base import Base, intpk, num_12_6, WithTimestamp, timestamp
 
@@ -62,7 +62,7 @@ class File(Base):
 
     id: Mapped[intpk]
     name: Mapped[Optional[str]]
-    purpose: Mapped[Optional[str]]
+    purpose: Mapped[Optional[str]] = mapped_column()
     content: Mapped[bytes]
     created_at = Mapped[timestamp]
     requests: Mapped[List["Request"]] = relationship(
@@ -73,7 +73,11 @@ class File(Base):
     )
 
     __mapper_args__ = {
-        "polymorphic_on": "purpose",
+        "polymorphic_identity": "regular_file",
+        "polymorphic_on": case(
+            (purpose == "excel_file", "excel_file"),
+            else_="regular_file"
+        ),
     }
 
 
