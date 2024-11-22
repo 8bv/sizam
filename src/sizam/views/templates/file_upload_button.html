@@ -1,0 +1,11 @@
+{% if last_file_id %}
+<script type="text/javascript">
+    localStorage.setItem("last_file_id", {{ last_file_id }});
+</script>
+{% endif %}
+
+<button hx-get="{{ url_for('get_form') }}" hx-swap="outerHTML"
+        hx-trigger="click[removeLastFileId()]"
+        data-mdb-button-init data-mdb-ripple-init
+        class="btn btn-primary btn-lg" id="upload_new_file">Загрузить новый файл
+</button>

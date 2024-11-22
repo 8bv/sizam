@@ -1,0 +1,8 @@
+<form hx-encoding="multipart/form-data" hx-post="{{ action }}">
+    <!-- method="post" action="{{ action }}"> -->
+    <input name="file_id" hidden="hidden" id="excel-file-id"/>
+    <script>
+        document.getElementById("excel-file-id").value = localStorage.getItem("last_file_id");
+    </script>
+    {% include "form_fields.html" %}
+</form>

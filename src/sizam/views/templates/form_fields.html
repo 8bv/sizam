@@ -1,0 +1,27 @@
+{% for field in fields %}
+<div class="row align-items-center py-3">
+    <div class="col-md-3 ps-5">
+        <h6 class="mb-0">{{ field.title }}</h6>
+    </div>
+    <div class="col-md-9 pe-5">
+        {% if field.type == "choice" %}
+        <select name="{{ field.name }}" class="form-select form-select-lg mb-3">
+            {% for choice in field.choices %}
+            <option value="{{ choice.value }}">{{ choice.value }}</option>
+            {% endfor %}
+        </select>
+        {% else %}
+        <input class="form-control form-control-lg" type="{{ field.type }}" name="{{ field.name }}"/>
+        {% if field.description %}
+        <div class="small text-muted mt-2">{{ field.description }}</div>
+        {% endif %}
+        {% endif %}
+    </div>
+    <p>
+</div>
+{% endfor %}
+<div class="px-5 py-4">
+    <button type="submit" data-mdb-button-init data-mdb-ripple-init
+            class="btn btn-primary btn-lg">{{ button_description }}
+    </button>
+</div>
